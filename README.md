@@ -99,5 +99,50 @@ sudo systemctl reload nginx
 
 <img width="441" height="361" alt="Снимок экрана 2026-10-26 в 22 01 28" src="https://github.com/user-attachments/assets/0e00e0aa-7ad8-4967-a0f2-c1f6ad13a157" />
 
+Скрипт бэкапа
+````
+artsiom@ubundu26:/opt/carss$ cat backup_carss.sh 
+#!/usr/bin/env bash
+set -euo pipefail
+
+DB_NAME="autos"
+DB_USER="carss_user"
+BACKUP_DIR="/var/backups/carss"
+RETENTION_DAYS=7
+DATE=$(date +%Y-%m-%d_%H-%M-%S)
+BACKUP_FILE="$BACKUP_DIR/${DB_NAME}_$DATE.sql.gz"
+
+mkdir -p "$BACKUP_DIR"
+
+echo "Starting backup for the database: $DB_NAME..."
+pg_dump -h 127.0.0.1 -U "$DB_USER" -d "$DB_NAME" --no-owner --no-privileges \
+    | gzip > "$BACKUP_FILE"
+
+if [ ! -s "$BACKUP_FILE" ]; then
+    echo "Error: backup file is empty: $BACKUP_FILE" >&2
+    exit 1
+fi
+
+gzip -t "$BACKUP_FILE"
+
+find "$BACKUP_DIR" -name "${DB_NAME}_*.sql.gz" -mtime +"$RETENTION_DAYS" -delete
+
+echo "Backup successfully created: $BACKUP_FILE"
+echo "Backup process finished."
+
+````
+
+````
+artsiom@ubundu26:/opt/carss$ sudo -u webadmin /opt/carss/backup_carss.sh
+Starting backup for the database: autos...
+Password: 
+Backup successfully created: /var/backups/carss/autos_2026-10-26_22-33-42.sql.gz
+Backup process finished.
+artsiom@ubundu26:/opt/carss$ ls -lh /var/backups/carss/
+total 4.0K
+-rw-r--r-- 1 webadmin webadmin 1.1K Oct 26 22:33 autos_2026-10-26_22-33-42.sql.gz
+````
+
+
 
 
